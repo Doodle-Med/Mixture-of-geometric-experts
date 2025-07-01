@@ -1,0 +1,64 @@
+{
+    "model": {
+        "input_dim": 1536,
+        "hidden_dim": 6144,
+        "output_dim": 1536,
+        "final_output_dim": 50272,
+        "vocab_size": 50272,
+        "pad_token_id": 50257,
+        "enable_vision": true,
+        "vision_tower_name": "openai/clip-vit-large-patch14",
+        "num_experts": 16,
+        "k": 4,
+        "recursion_steps": 4,
+        "memory_slots": 64,
+        "memory_width": 1536,
+        "use_analogy_reasoner": true,
+        "manifolds": [
+            "euclidean",
+            "hyperbolic",
+            "spherical",
+            "poincare",
+            "simplex",
+            "complex",
+            "lorentzian",
+            "product",
+            "euclidean",
+            "hyperbolic",
+            "spherical",
+            "poincare",
+            "simplex",
+            "complex",
+            "lorentzian",
+            "product"
+        ]
+    },
+    "data": {
+        "npz_files": {},
+        "seq_len": 1024,
+        "val_split": 0.05
+    },
+    "training": {
+        "batch_size": 4,
+        "use_amp": true,
+        "balance_loss_weight": 0.05,
+        "curvature_reg_weight": 0.005,
+        "verifier_loss_weight": 0.02,
+        "memory_auxiliary_loss_weight": 0.1,
+        "seed": 42,
+        "compile_model": false,
+        "gradient_accumulation_steps": 8,
+        "dataloader_num_workers": 0,
+        "prefetch_factor": 8,
+        "pin_memory": true,
+        "max_grad_norm": 1.0,
+        "warmup_steps": 500
+    },
+    "training_stages": {
+        "dense_warm":        { "epochs": 1, "optimizer": { "learning_rate": 1e-5 } },
+        "moe_specialise":    { "epochs": 3, "expert_lr_scale": 0.3,
+                               "optimizer": { "learning_rate": 3e-6 } },
+        "ppo_align":         { "epochs": 1, "ppo_kl_coef": 0.02,
+                               "optimizer": { "learning_rate": 1e-6 } }
+    }
+}

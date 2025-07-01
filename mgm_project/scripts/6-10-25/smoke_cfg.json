@@ -1,0 +1,152 @@
+{
+  "vocab_size": 50257,
+  "model": {
+    "vocab_size": 50257,
+    "input_dim": 64,
+    "hidden_dim": 128,
+    "output_dim": 64,
+    "final_output_dim": 50257,
+    "pad_token_id": 50256,
+    "num_experts": 16,
+    "k": 4,
+    "recursion_steps": 1,
+    "memory_slots": 8,
+    "memory_width": 64,
+    "enable_vision": true,
+    "vision_tower_name": "openai/clip-vit-large-patch14",
+    "manifolds": [
+      "euclidean",
+      "hyperbolic",
+      "spherical",
+      "poincare",
+      "simplex",
+      "complex",
+      "lorentzian",
+      "product",
+      "euclidean",
+      "hyperbolic",
+      "spherical",
+      "poincare",
+      "simplex",
+      "complex",
+      "lorentzian",
+      "product"
+    ]
+  },
+  "data": {
+    "seq_len": 8,
+    "val_split": 0.0
+  },
+  "streaming": {
+    "seq_len": 8,
+    "pad_to_multiple_of": 8,
+    "tokenizer_name": "gpt2",
+    "modalities": {
+      "text": {
+        "hf_dataset_name": "wikitext",
+        "config_name": "wikitext-103-raw-v1",
+        "text_column": "text",
+        "sampling_ratio": 0.25
+      },
+      "code": {
+        "hf_dataset_name": "bigcode/the-stack-dedup",
+        "config_name": "default",
+        "text_column": "content",
+        "sampling_ratio": 0.1
+      },
+      "audio": {
+        "hf_dataset_name": "openslr/librispeech_asr",
+        "config_name": "clean",
+        "split": "train.100",
+        "text_column": "text",
+        "audio_column": "audio",
+        "sampling_ratio": 0.05,
+        "trust_remote_code": true
+      },
+      "image": {
+        "hf_dataset_name": "cifar10",
+        "config_name": null,
+        "text_column": "label",
+        "image_column": "img",
+        "sampling_ratio": 0.03
+      }
+    }
+  },
+  "training": {
+    "batch_size": 4,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": 0.0001,
+    "max_steps": 1,
+    "save_steps": 25,
+    "eval_steps": 25,
+    "logging_steps": 5,
+    "dataloader_num_workers": 0,
+    "fp16": false,
+    "use_amp": true,
+    "dataloader_pin_memory": false,
+    "gradient_checkpointing": false,
+    "optim": "adamw_torch",
+    "lr_scheduler_type": "cosine",
+    "save_total_limit": 1,
+    "seed": 42,
+    "balance_loss_weight": 0.05,
+    "curvature_reg_weight": 0.005,
+    "verifier_loss_weight": 0.02,
+    "memory_auxiliary_loss_weight": 0.1,
+    "evaluation_strategy": "steps",
+    "save_strategy": "steps"
+  },
+  "training_stages": {
+    "curvature_calibration": {
+      "epochs": 1,
+      "label_smoothing": 0.0,
+      "optimizer": {
+        "learning_rate": 0.003,
+        "geo_lr_factor": 1.0,
+        "weight_decay": 0.0,
+        "reward_lr": 0.0
+      }
+    },
+    "reasoning_warmup": {
+      "epochs": 1,
+      "label_smoothing": 0.05,
+      "optimizer": {
+        "learning_rate": 0.001,
+        "reward_lr": 0.0005,
+        "weight_decay": 0.005,
+        "geo_lr_factor": 1.0
+      }
+    },
+    "branch_pretrain": {
+      "epochs": 1,
+      "label_smoothing": 0.1,
+      "optimizer": {
+        "learning_rate": 0.0008,
+        "reward_lr": 0.0004,
+        "weight_decay": 0.01,
+        "geo_lr_factor": 1.5
+      }
+    },
+    "gate_train": {
+      "epochs": 1,
+      "label_smoothing": 0.1,
+      "optimizer": {
+        "learning_rate": 0.0002,
+        "reward_lr": 0.0001,
+        "weight_decay": 0.01,
+        "geo_lr_factor": 1.0
+      }
+    },
+    "joint_finetune": {
+      "epochs": 1,
+      "label_smoothing": 0.15,
+      "scheduler_t0": 2,
+      "optimizer": {
+        "learning_rate": 0.0001,
+        "reward_lr": 5e-05,
+        "weight_decay": 0.015,
+        "geo_lr_factor": 1.2
+      }
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "model": {
+    "input_dim": 384,
+    "hidden_dim": 768,
+    "output_dim": 384,
+    "final_output_dim": 50272,
+    "vocab_size": 50272,
+    "pad_token_id": 50256,
+    "enable_vision": false,
+    "enable_audio": false,
+    "vision_tower_name": "openai/clip-vit-large-patch14",
+    "num_experts": 3,
+    "k": 2,
+    "recursion_steps": 1,
+    "memory_slots": 1,
+    "memory_width": 16,
+    "manifolds": [
+      "euclidean",
+      "hyperbolic", 
+      "spherical"
+    ],
+    "use_nuanced_routing": true,
+    "num_concept_groups": 4,
+    "sophistication_loss_weight": 0.01,
+    "geometric_specialization_weight": 0.005
+  },
+  "data": {
+    "seq_len": 128,
+    "val_split": 0.05,
+    "pad_to_multiple_of": 8
+  },
+  "streaming": {
+    "seq_len": 128,
+    "buffer_size": 50,
+    "prefetch_factor": 1,
+    "tokenizer_name": "gpt2",
+    "dataset_selection": {
+      "conversational": true,
+      "reasoning": true,
+      "code": false,
+      "scientific": false,
+      "web": false,
+      "books": false,
+      "arxiv": false
+    },
+    "modalities": {
+      "conversational": {
+        "hf_dataset_name": "daily_dialog",
+        "text_column": "dialog",
+        "sampling_ratio": 0.6,
+        "trust_remote_code": true
+      },
+      "reasoning": {
+        "hf_dataset_name": "squad",
+        "config_name": "plain_text",
+        "text_column": "context",
+        "sampling_ratio": 0.4,
+        "trust_remote_code": true
+      }
+    }
+  },
+  "training": {
+    "batch_size": 1,
+    "use_amp": false,
+    "balance_loss_weight": 0.01,
+    "curvature_reg_weight": 0.0005,
+    "verifier_loss_weight": 0.0,
+    "memory_auxiliary_loss_weight": 0.0,
+    "seed": 42,
+    "compile_model": false,
+    "gradient_accumulation_steps": 4,
+    "learning_rate": 1e-4,
+    "weight_decay": 0.01,
+    "warmup_steps": 20,
+    "lr_scheduler_type": "cosine",
+    "gradient_checkpointing": false,
+    "max_grad_norm": 0.5,
+    "optimizer": "adamw",
+    "save_steps": 9999999,
+    "eval_steps": 25,
+    "logging_steps": 5,
+    "dataloader_num_workers": 0,
+    "dataloader_pin_memory": false,
+    "remove_unused_columns": false
+  },
+  "training_stages": {
+    "curvature_calibration": {
+      "epochs": 1,
+      "max_steps": 100,
+      "early_stopping_patience": 20,
+      "early_stopping_threshold": 0.01,
+      "curvature_only": true,
+      "smart_calibration": true,
+      "smart_calibration_batches": 100,
+      "trainable_components": ["curvature"],
+      "learning_rate": 2e-4,
+      "balance_loss_weight": 0.0,
+      "curvature_reg_weight": 0.001
+    },
+    "reasoning_warmup": {
+      "epochs": 1,
+      "max_steps": 50,
+      "trainable_components": ["memory", "reasoning"],
+      "learning_rate": 8e-5,
+      "balance_loss_weight": 0.005,
+      "curvature_reg_weight": 0.0005
+    },
+    "branch_pretrain": {
+      "epochs": 1,
+      "max_steps": 50,
+      "trainable_components": ["experts", "gating"],
+      "learning_rate": 6e-5,
+      "balance_loss_weight": 0.01,
+      "curvature_reg_weight": 0.0005
+    },
+    "gate_train": {
+      "epochs": 1,
+      "max_steps": 50,
+      "trainable_components": ["gating", "router"],
+      "learning_rate": 4e-5,
+      "balance_loss_weight": 0.015,
+      "curvature_reg_weight": 0.0003
+    },
+    "joint_finetune": {
+      "epochs": 1,
+      "max_steps": 50,
+      "trainable_components": ["all"],
+      "learning_rate": 2e-5,
+      "balance_loss_weight": 0.02,
+      "curvature_reg_weight": 0.0001
+    }
+  },
+  "monitoring": {
+    "wandb_project": null,
+    "log_model_architecture": true,
+    "log_gradients": false,
+    "log_parameters": true,
+    "save_model_every_n_steps": 9999999
+  }
+} 

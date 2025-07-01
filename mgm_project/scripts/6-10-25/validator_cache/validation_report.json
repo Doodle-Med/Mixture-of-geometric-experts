@@ -1,0 +1,124 @@
+{
+  "validation_summary": {
+    "total_files": 0,
+    "passed_checks": 2,
+    "warnings": 1,
+    "errors": 0,
+    "overall_status": "PASS"
+  },
+  "detailed_results": {
+    "passed": [
+      "No sequence length overflows detected",
+      "All file paths are valid"
+    ],
+    "warnings": [
+      "No pad_to_multiple_of specified - may cause inconsistent batch shapes"
+    ],
+    "errors": [],
+    "tokenizer_analysis": {
+      "primary_tokenizer": "gpt2",
+      "vocab_size": 50272,
+      "special_tokens": {
+        "pad_token": "<|endoftext|>",
+        "eos_token": "<|endoftext|>",
+        "bos_token": "<|endoftext|>",
+        "unk_token": "<|endoftext|>"
+      },
+      "test_results": {
+        "Smith & Wesson": {
+          "encoded": [
+            17919,
+            1222,
+            370,
+            39670
+          ],
+          "decoded": "Smith & Wesson",
+          "round_trip_match": true,
+          "token_count": 4
+        },
+        "Hello, world! How are you?": {
+          "encoded": [
+            15496,
+            11,
+            995,
+            0,
+            1374,
+            389,
+            345,
+            30
+          ],
+          "decoded": "Hello, world! How are you?",
+          "round_trip_match": true,
+          "token_count": 8
+        },
+        "def function(x): return x + 1": {
+          "encoded": [
+            4299,
+            2163,
+            7,
+            87,
+            2599,
+            1441,
+            2124,
+            1343,
+            352
+          ],
+          "decoded": "def function(x): return x + 1",
+          "round_trip_match": true,
+          "token_count": 9
+        },
+        "The quick brown fox jumps over the lazy dog.": {
+          "encoded": [
+            464,
+            2068,
+            7586,
+            21831,
+            18045,
+            625,
+            262,
+            16931,
+            3290,
+            13
+          ],
+          "decoded": "The quick brown fox jumps over the lazy dog.",
+          "round_trip_match": true,
+          "token_count": 10
+        },
+        "Special chars: @#$%^&*()_+-=[]{}|;':\",./<>?": {
+          "encoded": [
+            13409,
+            34534,
+            25,
+            2488,
+            29953,
+            4,
+            61,
+            5,
+            9,
+            3419,
+            62,
+            10,
+            12,
+            28,
+            21737,
+            90,
+            92,
+            91,
+            26,
+            10354,
+            1600,
+            19571,
+            27,
+            29,
+            30
+          ],
+          "decoded": "Special chars: @#$%^&*()_+-=[]{}|;':\",./<>?",
+          "round_trip_match": true,
+          "token_count": 25
+        }
+      }
+    },
+    "vocab_requirements": {},
+    "file_manifest": {}
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "model_name": "mgm_ultimate_comprehensive",
+  "vocab_size": 50281,
+  "special_tokens": {
+    "pad_token": "<|pad|>",
+    "unk_token": "<|unk|>",
+    "bos_token": "<|startoftext|>",
+    "eos_token": "<|endoftext|>",
+    "sep_token": "<|sep|>",
+    "image_start_token": "<|image_start|>",
+    "image_end_token": "<|image_end|>",
+    "audio_start_token": "<|audio_start|>",
+    "audio_end_token": "<|audio_end|>",
+    "video_start_token": "<|video_start|>",
+    "video_end_token": "<|video_end|>",
+    "code_start_token": "<|code_start|>",
+    "code_end_token": "<|code_end|>",
+    "math_start_token": "<|math_start|>",
+    "math_end_token": "<|math_end|>",
+    "reasoning_start_token": "<|reasoning_start|>",
+    "reasoning_end_token": "<|reasoning_end|>",
+    "thinking_start_token": "<|thinking_start|>",
+    "thinking_end_token": "<|thinking_end|>",
+    "teaching_token": "<|teaching|>",
+    "knowledge_token": "<|knowledge|>",
+    "user_token": "<|user|>",
+    "assistant_token": "<|assistant|>",
+    "system_token": "<|system|>",
+    "multimodal_placeholder_token": "<|mm_placeholder|>"
+  },
+  "token_count": 25,
+  "ultimate_scheme": true,
+  "compatible_with": [
+    "enhanced_multimodal",
+    "ultimate_audio",
+    "ultimate_text_enhanced",
+    "mgm_neural_network",
+    "multimodal_training"
+  ],
+  "description": "Ultimate comprehensive tokenizer for MGM neural network with full multimodal support"
+}

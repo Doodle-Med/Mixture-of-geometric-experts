@@ -1,0 +1,199 @@
+{
+  "vocab_size": 50272,
+  "model": {
+    "vocab_size": 50272,
+    "input_dim": 64,
+    "hidden_dim": 256,
+    "output_dim": 64,
+    "final_output_dim": 50272,
+    "pad_token_id": 50256,
+    "num_experts": 9,
+    "k": 8,
+    "recursion_steps": 4,
+    "memory_slots": 256,
+    "memory_width": 64,
+    "enable_vision": false,
+    "vision_tower_name": "openai/clip-vit-large-patch14",
+    "enable_audio": false,
+    "audio_encoder_name": "facebook/encodec_24khz",
+    "manifolds": [
+      "euclidean",
+      "hyperbolic",
+      "spherical",
+      "euclidean",
+      "hyperbolic",
+      "spherical",
+      "euclidean",
+      "hyperbolic",
+      "spherical"
+    ],
+    "use_nuanced_routing": true,
+    "num_concept_groups": 4
+  },
+  "data": {
+    "seq_len": 128,
+    "val_split": 0.02
+  },
+  "streaming": {
+    "seq_len": 128,
+    "pad_to_multiple_of": 64,
+    "tokenizer_name": "gpt2",
+    "buffer_size": 10000,
+    "prefetch_factor": 8,
+    "modalities": {
+      "reasoning": {
+        "hf_dataset_name": "squad",
+        "config_name": null,
+        "text_column": "question",
+        "sampling_ratio": 0.05,
+        "streaming": true,
+        "buffer_size": 2000
+      },
+      "logic_reasoning": {
+        "hf_dataset_name": "glue",
+        "config_name": "rte",
+        "text_column": "sentence1",
+        "sampling_ratio": 0.03,
+        "streaming": true,
+        "buffer_size": 1000
+      },
+      "cot": {
+        "hf_dataset_name": "allenai/math_qa",
+        "config_name": null,
+        "text_column": "Problem",
+        "sampling_ratio": 0.06,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 2000
+      }
+    },
+    "sample_size": 500,
+    "prefetch": 2,
+    "dataset_selection": {
+      "conversational": false,
+      "reasoning": true,
+      "code": false,
+      "scientific": false,
+      "web": false,
+      "books": false,
+      "cot": false,
+      "logic_reasoning": false,
+      "math": false,
+      "wikitext": false
+    }
+  },
+  "training": {
+    "batch_size": 1,
+    "gradient_accumulation_steps": 8,
+    "learning_rate": 0.0002,
+    "max_steps": 100,
+    "warmup_steps": 2,
+    "weight_decay": 0.01,
+    "max_grad_norm": 1.0,
+    "dataloader_num_workers": 4,
+    "save_steps": 100,
+    "eval_steps": 10,
+    "logging_steps": 1,
+    "fp16": true,
+    "use_amp": true,
+    "dataloader_pin_memory": true,
+    "gradient_checkpointing": false,
+    "optim": "adamw_torch",
+    "lr_scheduler_type": "cosine",
+    "save_total_limit": 5,
+    "use_flash_attention": true,
+    "balance_loss_weight": 0.05,
+    "curvature_reg_weight": 0.005,
+    "verifier_loss_weight": 0.02,
+    "memory_auxiliary_loss_weight": 0.1,
+    "evaluation_strategy": "steps",
+    "save_strategy": "steps",
+    "seed": 42,
+    "tokens_per_parameter": 20,
+    "target_tokens": "40B",
+    "validation_max_steps": 5,
+    "freeze_curvature_steps": 10000,
+    "freeze_router_steps": 10000
+  },
+  "training_stages": {
+    "curvature_calibration": {
+      "epochs": 1,
+      "label_smoothing": 0.0,
+      "optimizer": {
+        "learning_rate": 0.005,
+        "geo_lr_factor": 1.0,
+        "weight_decay": 0.0,
+        "reward_lr": 0.0
+      },
+      "smart_calibration_batches": 5,
+      "max_steps": 5
+    },
+    "reasoning_warmup": {
+      "epochs": 1,
+      "label_smoothing": 0.05,
+      "optimizer": {
+        "learning_rate": 0.002,
+        "reward_lr": 0.001,
+        "weight_decay": 0.005,
+        "geo_lr_factor": 1.0
+      }
+    },
+    "branch_pretrain": {
+      "epochs": 1,
+      "label_smoothing": 0.1,
+      "optimizer": {
+        "learning_rate": 0.001,
+        "reward_lr": 0.0005,
+        "weight_decay": 0.01,
+        "geo_lr_factor": 1.5
+      }
+    },
+    "gate_train": {
+      "epochs": 1,
+      "label_smoothing": 0.1,
+      "optimizer": {
+        "learning_rate": 0.0005,
+        "reward_lr": 0.0002,
+        "weight_decay": 0.01,
+        "geo_lr_factor": 1.0
+      }
+    },
+    "joint_finetune": {
+      "epochs": 1,
+      "label_smoothing": 0.15,
+      "scheduler_t0": 3,
+      "optimizer": {
+        "learning_rate": 0.0002,
+        "reward_lr": 0.0001,
+        "weight_decay": 0.015,
+        "geo_lr_factor": 1.2
+      }
+    }
+  },
+  "environment": {
+    "distributed": true,
+    "mixed_precision": "fp16",
+    "compile_model": false,
+    "memory_efficient_attention": true,
+    "gradient_checkpointing": true,
+    "cpu_offload": false
+  },
+  "monitoring": {
+    "wandb_project": "mgm-flagship-production",
+    "log_model_architecture": true,
+    "log_gradients": false,
+    "log_parameters": true,
+    "save_model_every_n_steps": 5000
+  },
+  "use_streaming": true,
+  "router": {
+    "softmax_temp": {
+      "schedule": {
+        "type": "cosine",
+        "start": 2.0,
+        "end": 1.0,
+        "steps": 5000
+      }
+    }
+  }
+}

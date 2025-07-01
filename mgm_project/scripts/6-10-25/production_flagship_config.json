@@ -1,0 +1,262 @@
+{
+  "vocab_size": 50272,
+  "model": {
+    "vocab_size": 50272,
+    "input_dim": 1024,
+    "hidden_dim": 4096,
+    "output_dim": 1024,
+    "final_output_dim": 50272,
+    "pad_token_id": 50256,
+    "num_experts": 64,
+    "k": 8,
+    "recursion_steps": 4,
+    "memory_slots": 256,
+    "memory_width": 2048,
+    "enable_vision": true,
+    "vision_tower_name": "openai/clip-vit-large-patch14",
+    "enable_audio": true,
+    "audio_encoder_name": "facebook/encodec_24khz",
+    "manifolds": [
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare", 
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product",
+      "euclidean", "hyperbolic", "spherical", "poincare",
+      "simplex", "complex", "lorentzian", "product"
+    ]
+  },
+  "data": {
+    "seq_len": 32768,
+    "val_split": 0.02
+  },
+  "streaming": {
+    "seq_len": 32768,
+    "pad_to_multiple_of": 64,
+    "tokenizer_name": "gpt2",
+    "buffer_size": 10000,
+    "prefetch_factor": 8,
+    "modalities": {
+      "text": {
+        "hf_dataset_name": "wikitext",
+        "config_name": "wikitext-103-raw-v1",
+        "text_column": "text",
+        "sampling_ratio": 0.20,
+        "streaming": true,
+        "buffer_size": 5000
+      },
+      "web": {
+        "hf_dataset_name": "allenai/c4",
+        "config_name": "en",
+        "text_column": "text",
+        "sampling_ratio": 0.15,
+        "streaming": true,
+        "buffer_size": 5000
+      },
+      "books": {
+        "hf_dataset_name": "bookcorpus",
+        "config_name": null,
+        "text_column": "text",
+        "sampling_ratio": 0.08,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 3000
+      },
+      "code": {
+        "hf_dataset_name": "bigcode/the-stack-dedup",
+        "config_name": "default",
+        "text_column": "content",
+        "sampling_ratio": 0.12,
+        "streaming": true,
+        "buffer_size": 4000
+      },
+      "code_python": {
+        "hf_dataset_name": "codeparrot/github-code",
+        "config_name": "python",
+        "text_column": "code",
+        "sampling_ratio": 0.06,
+        "streaming": true,
+        "buffer_size": 2000
+      },
+      "scientific": {
+        "hf_dataset_name": "scientific_papers",
+        "config_name": "pubmed",
+        "text_column": "abstract",
+        "sampling_ratio": 0.08,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 3000
+      },
+      "arxiv": {
+        "hf_dataset_name": "scientific_papers",
+        "config_name": "arxiv",
+        "text_column": "abstract",
+        "sampling_ratio": 0.05,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 2000
+      },
+      "cot": {
+        "hf_dataset_name": "allenai/math_qa",
+        "config_name": null,
+        "text_column": "Problem",
+        "sampling_ratio": 0.06,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 2000
+      },
+      "reasoning": {
+        "hf_dataset_name": "squad",
+        "config_name": null,
+        "text_column": "question",
+        "sampling_ratio": 0.05,
+        "streaming": true,
+        "buffer_size": 2000
+      },
+      "logic_reasoning": {
+        "hf_dataset_name": "glue",
+        "config_name": "rte",
+        "text_column": "sentence1",
+        "sampling_ratio": 0.03,
+        "streaming": true,
+        "buffer_size": 1000
+      },
+      "conversational": {
+        "hf_dataset_name": "daily_dialog",
+        "config_name": null,
+        "text_column": "dialog",
+        "sampling_ratio": 0.05,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 2000
+      },
+      "audio": {
+        "hf_dataset_name": "openslr/librispeech_asr",
+        "config_name": "clean",
+        "split": "train.360",
+        "text_column": "text",
+        "audio_column": "audio",
+        "sampling_ratio": 0.04,
+        "trust_remote_code": true,
+        "streaming": true,
+        "buffer_size": 1500
+      },
+      "image": {
+        "hf_dataset_name": "cifar10",
+        "config_name": null,
+        "text_column": "label",
+        "image_column": "img",
+        "sampling_ratio": 0.03,
+        "streaming": true,
+        "buffer_size": 1000
+      }
+    }
+  },
+  "training": {
+    "batch_size": 4,
+    "gradient_accumulation_steps": 8,
+    "learning_rate": 2e-4,
+    "max_steps": 100000,
+    "warmup_steps": 2000,
+    "weight_decay": 0.01,
+    "max_grad_norm": 1.0,
+    "dataloader_num_workers": 4,
+    "save_steps": 2500,
+    "eval_steps": 1000,
+    "logging_steps": 100,
+    "fp16": true,
+    "use_amp": true,
+    "dataloader_pin_memory": true,
+    "gradient_checkpointing": true,
+    "optim": "adamw_torch",
+    "lr_scheduler_type": "cosine",
+    "save_total_limit": 5,
+    "use_flash_attention": true,
+    "balance_loss_weight": 0.05,
+    "curvature_reg_weight": 0.005,
+    "verifier_loss_weight": 0.02,
+    "memory_auxiliary_loss_weight": 0.1,
+    "evaluation_strategy": "steps",
+    "save_strategy": "steps",
+    "seed": 42,
+    "tokens_per_parameter": 20,
+    "target_tokens": "40B"
+  },
+  "training_stages": {
+    "curvature_calibration": {
+      "epochs": 1,
+      "label_smoothing": 0.0,
+      "optimizer": {
+        "learning_rate": 5e-3,
+        "geo_lr_factor": 1.0,
+        "weight_decay": 0.0,
+        "reward_lr": 0.0
+      }
+    },
+    "reasoning_warmup": {
+      "epochs": 3,
+      "label_smoothing": 0.05,
+      "optimizer": {
+        "learning_rate": 2e-3,
+        "reward_lr": 1e-3,
+        "weight_decay": 0.005,
+        "geo_lr_factor": 1.0
+      }
+    },
+    "branch_pretrain": {
+      "epochs": 5,
+      "label_smoothing": 0.1,
+      "optimizer": {
+        "learning_rate": 1e-3,
+        "reward_lr": 5e-4,
+        "weight_decay": 0.01,
+        "geo_lr_factor": 1.5
+      }
+    },
+    "gate_train": {
+      "epochs": 3,
+      "label_smoothing": 0.1,
+      "optimizer": {
+        "learning_rate": 5e-4,
+        "reward_lr": 2e-4,
+        "weight_decay": 0.01,
+        "geo_lr_factor": 1.0
+      }
+    },
+    "joint_finetune": {
+      "epochs": 10,
+      "label_smoothing": 0.15,
+      "scheduler_t0": 3,
+      "optimizer": {
+        "learning_rate": 2e-4,
+        "reward_lr": 1e-4,
+        "weight_decay": 0.015,
+        "geo_lr_factor": 1.2
+      }
+    }
+  },
+  "environment": {
+    "distributed": true,
+    "mixed_precision": "fp16",
+    "compile_model": false,
+    "memory_efficient_attention": true,
+    "gradient_checkpointing": true,
+    "cpu_offload": false
+  },
+  "monitoring": {
+    "wandb_project": "mgm-flagship-production",
+    "log_model_architecture": true,
+    "log_gradients": false,
+    "log_parameters": true,
+    "save_model_every_n_steps": 5000
+  }
+} 
