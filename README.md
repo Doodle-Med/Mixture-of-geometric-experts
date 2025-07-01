@@ -1,134 +1,67 @@
 # Mixture of Geometric Experts (MGM)
-A research-grade Large Language Model (LLM) framework that **mixes multiple geometric experts** (Euclidean, Hyperbolic, Spherical, *etc.*) and a powerful routing gate to achieve manifold specialisation, efficient capacity scaling and improved reasoning.
 
-This repository collects a **self-contained training & evaluation pipeline** together with production tooling (resume, monitoring, dataset validation, memory guard) and several ready-to-run configurations that scale from a laptop smoke test to a 2 B-parameter flagship system.
+**Architecture:** MGM is a mixture-of-experts Transformer that incorporates multiple geometric manifolds and a working memory. It maintains *N* expert subnetworks (“manifolds”) of different types (e.g. Euclidean, hyperbolic, spherical, etc.) and uses an 8-way Mixture-of-Experts routing: at each layer the top-*K* experts are selected by the gating network for each token.  A **working memory** of 256 slots (each 2048-dimensional) is fused into the model’s computation.  Each Transformer block uses **RMSNorm** (root-mean-square normalization, omitting the mean subtraction) instead of LayerNorm (as in recent LLaMA-style models) to stabilize training.  Key architecture flags include `--hidden-dim` (hidden/embedding size), `--experts-num` (number of experts), `--k-experts` (top-*K* selected each step), and `--num-heads` (self-attention heads).  For example, the integration tests run with `--hidden-dim 128 --experts-num 16 --k-experts 4 --num-heads 12`. These determine the model’s depth and width (e.g. hidden size 1600 in the final model) and thus its total parameter count.  In practice, MGM’s parameter count is on the order of **hundreds of millions** (exact count depends on the chosen hidden size, number of experts, etc.).
 
----
-## Table of Contents
-1. [Quick start](#quick-start)
-2. [Directory layout](#directory-layout)
-3. [Core scripts](#core-scripts)
-4. [Utility & tooling](#utility--tooling)
-5. [Configuration files](#configuration-files)
-6. [Common workflows](#common-workflows)
-7. [FAQ](#faq)
-8. [License](#license)
+* **Mixture-of-Experts Routing:** Uses top-*K* expert selection with curvature-aware gating (“nuanced-routing” flag). The gate learns to route tokens to the manifold experts most suited to their geometry.
+* **Geometric Manifolds:** Supports 64 experts over 8 geometric types (euclid, hyperbolic, spherical, Poincaré, simplex, complex, Lorentzian, product). Each expert is a Transformer branch with its own parameters.
+* **Memory Module:** A separate working memory (256 slots × 2048 width) is incorporated and fused via attention. This allows long-term context retention and “memory attention fusion.”
+* **Normalization:** RMSNorm layers are used throughout (no mean-centering) to improve stability.
+* **Gradient Scaling:** A **ComplexFilteredGradScaler** automatically filters complex-valued parameters during mixed-precision (AMP) training, preventing CUDA scatter/gather errors while keeping \~99% parameters in full AMP mode.
 
----
-## Quick start
-```bash
-# Create & activate a fresh environment (conda / venv)
-python -m pip install --upgrade pip
-pip install torch transformers datasets wandb geoopt
+## Training Configuration
 
-# Clone & enter the repo
-git clone https://github.com/<you>/Mixture-of-geometric-experts.git
-cd Mixture-of-geometric-experts
+Training is controlled by a CLI script (`integration_test_runner.py`) with many flags that directly affect the model and data pipeline. Key options include:
 
-# Run an end-to-end **smoke test** (takes <60 s on CPU)
-cd mgm_project/scripts/6-10-25
-python3 integration_test_runner.py --stage-steps 1 \
-    --hidden-dim 64 --seq-len 32 --experts-num 8 --k-experts 2 \
-    --num-heads 4 --learning-rate 3e-4 --dataset-conversational \
-    --amp-off --flash-attention-off --skip-setup --sample-size 10 \
-    --validation-steps 1 --nuanced-routing
-```
-The run prints curvature analysis and should end with **"EXCELLENT expert diversity"**.
+* `--hidden-dim`, `--experts-num`, `--k-experts`, `--num-heads`, `--learning-rate` – Set the core model architecture and optimizer.  For example, `--hidden-dim 128 --experts-num 16 --k-experts 4 --num-heads 12` in the test run.
+* `--seq-len` – Maximum sequence length for training.
+* `--dataset-<subset>` – Choose training subsets. Available subsets include **chain-of-thought**, **reasoning**, and **conversational** data. (In integration tests, `--dataset-conversational` was used; other runs use `--dataset-reasoning` or `--dataset-cot` accordingly.) These flags switch which portion of the streaming dataset is loaded.
+* `--amp-off` / `--flash-attention-off` – Disable automatic mixed precision or FlashAttention optimizations, respectively. By default, AMP is on (filtered by the custom scaler) and FlashAttention is used if available.
+* `--skip-setup` – Skip initial calibration steps (e.g. curvature calibration) and resume an existing run.
+* `--nuanced-routing` – Enable the curvature-aware (nuanced) routing algorithm in the gate. This influences how the gate balances experts, especially across different geometries.
+* `--sample-size`, `--validation-steps`, `--stage-steps` – Control the length of training and validation runs (used mainly for debugging/integration tests).
 
----
-## Directory layout
-```text
-Mixture-of-geometric-experts/
-├─ mgm_project/scripts/6-10-25/   # All runnable scripts (see below)
-│  ├─ *.py                        # Training, validation, monitoring, …
-│  ├─ *.json                      # Ready-made configs
-│  └─ validator_cache/            # Auto-generated artefacts
-├─ tests/                         # Unit tests
-└─ README.md                      # You are here
-```
+These flags are parsed by `integration_test_runner.py` and passed to `train_geometric_model_v1.py` and the dataset loader. For instance, setting `--experts-num M --k-experts K` makes the model instantiate *M* experts and use top-*K* selection, while `--dataset-cot` would trigger the streaming loader to fetch chain-of-thought examples.  The dataset is loaded via a streaming loader (in `streaming_dataset_loader.py`), which assembles the selected subsets on-the-fly.
 
----
-## Core scripts
-The **`mgm_project/scripts/6-10-25`** folder is intentionally self-sufficient. Every script can be executed directly with `python3 <script>.py …`.
+## Training Data and Procedure
 
-| Script | Purpose | Typical usage |
-|--------|---------|---------------|
-| `concept_aware_mgm.py` | Minimal demo showing concept-aware routing & generation. | `python3 concept_aware_mgm.py` |
-| `train_geometric_model_v2.py` | Full training loop + model definition (~2 k LOC). Automatically invoked by other wrappers. | _Do not call directly_ (unless you want to hack the internals). |
-| `integration_test_runner.py` | Patched training launcher used in CI / quick benchmarks. Allows **hundreds** of CLI flags to monkey-patch JSON configs on the fly. | See examples in [Quick start](#quick-start). |
-| `run_training.py` | Generates an **optimised config** (`optim_run_cfg.json`) and a checkpoint-aware wrapper, then launches `train_geometric_model_v2.py`. Ideal for medium-scale experiments. | `python run_training.py` |
-| `run_flagship_production.py` | Orchestrates a **32 K-context / 64-expert / 2 B param** production run. Handles environment tuning, dependency installation, monitoring and packaging. | `python run_flagship_production.py --config production_flagship_config.json` |
-| `resume_orchestrator.py` & `resume_helper.py` | Robust resume logic – download or discover the latest checkpoint, patch optimiser / scheduler / AMP scaler state and continue training from the correct stage. | `python resume_orchestrator.py <ckpt_or_dir> --config optim_run_cfg.json` |
+The final checkpoint **model\_5** was trained on a *curated set* of about **80,000 text samples** drawn from diverse reasoning-focused data: chain-of-thought problems, logical reasoning puzzles, and conversational prompts.  This mixes formal reasoning text with dialogue-like inputs to improve both inference and chit-chat skills.  Training proceeded in stages:
 
-### Gating & experts
-Internally the model lives in `train_geometric_model_v2.py` and is composed of:
-* `GeometricExpert` – manifold-specific feed-forward block (+ exp/log maps)
-* `NuancedGeometricGate` – temperature-annealed top-*k* router with concept analysis
-* `ConceptGroupCombiner` / `SpectralCombiner` – merge expert outputs
-* `ThoughtGenerator` – lightweight reasoning head used during PPO alignment
+1. **Curvature Calibration:** Initialize and calibrate the geometric manifolds (e.g. adjust curvature parameters for hyperbolic/other spaces).
+2. **Reasoning Warmup:** A brief warmup on reasoning tasks to establish initial patterns.
+3. **Branch Pretrain:** Train each expert branch (manifold network) on its data subset to specialize its representations.
+4. **Gate Training:** Train the gating network (with branches fixed) to optimize routing decisions.
+5. **Joint Finetune:** End-to-end fine-tuning of the full model (all experts + gate) on the entire dataset for final integration.
 
----
-## Utility & tooling
-| Script | What it does | Why you need it |
-|--------|--------------|-----------------|
-| `production_dataset_validator.py` | Deep inspection of NPZ/NPY or streaming datasets – detects out-of-vocab tokens, dtype inconsistencies, negative indices, sequence overflows, *etc.* Generates JSON & pretty console summary. | Run **before any long training** to avoid cryptic CUDA errors hours later.<br>`python production_dataset_validator.py optimized_minimal_memory_config.json` |
-| `memory_guard.py` | Real-time GPU/CPU memory watchdog, gradient NaN filter and adaptive batch-size tuner. Import and wrap your training loop to make OOMs virtually impossible. | See `DynamicMemoryGuard` class for example usage. |
-| `streaming_dataset_loader.py` | June-2025 grade HF streaming wrapper with retry logic, webdataset fixes and rolling cache. Powers all streaming runs. | Imported automatically by the training scripts. |
-| `training_monitor.py` | Out-of-band watchdog that tails logs, checks GPU utilisation, disk space and kills/restarts stale runs. Ideal for remote clusters. | `python -m mgm_project.scripts.6-10-25.training_monitor` |
+During training, **flash attention** is enabled by default for efficiency, and AMP is on (with the custom scaler handling complex tensors). Checkpoints are saved at each stage (see the files in `model_5`), with the final full-model weights in `mgm_geometric_model_final.pth`.
 
----
-## Configuration files
-All configs follow the same schema and can be hot-patched via CLI flags (see **`integration_test_runner.py`**):
+## Final Model Details
 
-* `smoke_cfg.json` – 8-token context & 16 experts, pure CPU verification.
-* `optimized_minimal_memory_config.json` – 3 experts, single GPU friendly.
-* `mgm_config.json` – Research default (16 experts, 1 K context).
-* `production_flagship_config.json` – 64 experts, 32 K context, multimodal.
-* `test_config_patched.json` – Auto-generated by the integration test runner.
+The `model_5` checkpoint corresponds to a modestly-sized MGM instance (hidden dimension 1600). With these settings, the total parameter count is on the order of a few hundred million.  The architecture includes multiple attention layers (num-heads as set above), *M* experts of size 1600 each, plus memory and gating parameters.  The **architecture properties** (hidden size, experts, heads) can be inferred from the training flags: e.g. using 16 experts with K=8 (top-8 routing), 12 heads, etc., would yield a specific param count.
 
-> **Tip:** copy one of these and tweak `model.num_experts`, `training.batch_size`, … or drive everything from CLI flags (e.g. `--experts-num 8 --k-experts 2`).
+Because of the MoE structure, the effective “parallel” capacity is large even with a moderate hidden size.  In particular, the 256×2048 memory adds \~500K parameters, each Transformer layer has \~O(4\*hidden²) params, and each expert branch replicates these. For instance, 16 experts of hidden 1600, with typical feed-forward factor 4, yields roughly **hundreds of millions** of weights. (Exact count depends on number of layers and experts.)
 
----
-## Common workflows
-### 1. Smoke / CI test (CPU or single GPU)
-```bash
-cd mgm_project/scripts/6-10-25
-python3 integration_test_runner.py --amp-off --flash-attention-off \
-       --hidden-dim 64 --seq-len 32 --experts-num 8 --k-experts 2 \
-       --stage-steps 1 --sample-size 10 --validation-steps 1
+## Novel Components and Experimental Features
+
+* **Geometric Mixture-of-Experts:** MGM’s core novelty is routing inputs across manifold experts. This *mixture-of-geometries* lets the model reason in different latent spaces. The gate uses a **curvature-aware routing** (“nuanced-routing”) strategy to balance experts from different manifolds.
+* **Working Memory Fusion:** The 256-slot memory provides a persistent context vector. At each layer, attention is computed jointly over the token embeddings and the memory slots (a “memory-attention fusion”), allowing long-range information flow beyond the fixed context window.
+* **ComplexGradient Scaling:** Training uses a custom **ComplexFilteredGradScaler** that automatically skips complex-valued parameters when scaling gradients. This eliminates rare CUDA scatter/gather errors while still benefiting from AMP for the rest of the model.
+* **Streaming Data Pipeline:** The model was trained using a streaming loader to handle mixed datasets without large local storage. This enabled seamless mixing of multiple text sources (chain-of-thought, reasoning, dialogue).
+
+## Usage
+
+Once uploaded to Hugging Face, the model can be used like any Transformers model. For example:
+
+```python
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+tokenizer = AutoTokenizer.from_pretrained("doodle-med/MGM")
+model = AutoModelForCausalLM.from_pretrained("doodle-med/MGM", subfolder="model_5")
+
+inputs = tokenizer("Q: Why is the sky blue? A:", return_tensors="pt")
+output_ids = model.generate(**inputs)
+print(tokenizer.decode(output_ids[0], skip_special_tokens=True))
 ```
 
-### 2. Dataset validation only
-```bash
-python3 production_dataset_validator.py optimized_minimal_memory_config.json
-```
+This will invoke the `model_5/mgm_geometric_model_final.pth` weights. Adjust generation parameters as needed for your application.
 
-### 3. Full streaming training (research scale)
-```bash
-python run_training.py              # creates optim_run_cfg.json
-# (optional) resume later:
-python resume_orchestrator.py checkpoints/ --config optim_run_cfg.json
-```
-
-### 4. Flagship multimodal run (multi-GPU or TPU-v5e)
-```bash
-python run_flagship_production.py --config production_flagship_config.json
-```
-
----
-## FAQ
-**Q:** *Why do I get "Out of memory" even at small batch sizes?*
-
-> Enable the guard: wrap your training loop with `DynamicMemoryGuard.safe_forward_pass()` / `.safe_backward_pass()`.
-
-**Q:** *How do I add my own dataset?*
-
-> 1. Edit / copy a JSON config.<br>2. Add a new entry under `streaming.modalities`. The high-level loader takes care of the rest.
-
-**Q:** *Can I train without internet access?*
-
-> Yes – place NPZ/NPY shards and point `data.npz_files` / `data.npy_files` to them. The same trainer works offline.
-
----
-## License
-This project is licensed under the [Apache 2.0](LICENSE) license.
+**Sources:** The architecture and training details are described in the MGM project repository and PR documentation. These explain the geometric expert design, memory module, gradient-scaler, and the CLI flags used for training.
